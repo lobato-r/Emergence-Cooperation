@@ -1,0 +1,1387 @@
+;;=====================================================================
+;;       Emergence of Cooperation
+;;               with
+;;        Imperfect Monitoring 
+;;=====================================================================
+;; Roberto Lobato López
+;;    129883
+;;
+;; Sistemas Complejos Adaptativos
+;;=====================================================================
+
+turtles-own [estrategia ;; String - Nombre de la estrategia que usa el agente
+             accion ;; String - Accion que juega en cada turno segun la estrategia y la historia
+             historia ;; List - conjunto de acciones jugadas
+             utilidad
+             utilidad-total
+             cont ;; contador de juegos por jugar
+;------------GENES----------------------------------------------
+             secuencia
+             ;Para inicializar:
+             gen01
+             gen02
+             gen03
+             gen04
+             gen05
+             gen06
+             ;Todas las combinaciones:
+             gen1
+             gen2
+             gen3
+             gen4
+             gen5
+             gen6
+             gen7
+             gen8
+             gen9
+             gen10
+             gen11
+             gen12
+             gen13
+             gen14
+             gen15
+             gen16
+             gen17
+             gen18
+             gen19
+             gen20
+             gen21
+             gen22
+             gen23
+             gen24
+             gen25
+             gen26
+             gen27
+             gen28
+             gen29
+             gen30
+             gen31
+             gen32
+             gen33
+             gen34
+             gen35
+             gen36
+             gen37
+             gen38
+             gen39
+             gen40
+             gen41
+             gen42
+             gen43
+             gen44
+             gen45
+             gen46
+             gen47
+             gen48
+             gen49
+             gen50
+             gen51
+             gen52
+             gen53
+             gen54
+             gen55
+             gen56
+             gen57
+             gen58
+             gen59
+             gen60
+             gen61
+             gen62
+             gen63
+             gen64     
+            ]
+
+globals [historia-señal
+         señal
+         m-utilidad-total;; media de utilidades
+         s-utilidad-total ;; desviación estándar de utilidades
+         coop-gen
+         m-coop-gen
+         ]
+
+
+
+to SetUp
+  ca
+  reset-ticks
+  set señal 0
+  set historia-señal []
+  set m-utilidad-total 0
+  set s-utilidad-total 0
+  set coop-gen []
+  set m-coop-gen 0
+end
+
+
+to signal-publica
+  publica 2
+  juguemos turtle 0 turtle 1
+end
+
+
+to first-gen
+  
+  publica poblacion
+end
+
+to evoluciona
+  
+  ;; Que jueguen los unos contra los otros
+  while [any? turtles with [cont > 0]]
+  [
+    let jugador1 one-of turtles with [cont > 0]
+    let jugador2 nobody
+    ask jugador1
+    [set jugador2 one-of other turtles with [cont > 0]] ;; Si no hay nadie = nobody
+    
+    ifelse (jugador2 != nobody)
+    [
+      juguemos jugador1 jugador2
+      ask jugador1
+      [set cont (cont - 1)]
+      ask jugador2
+      [set cont (cont - 1)]
+    ]
+    ;; De lo contrario es el único y lo ponemos contra otro pero no guardamos la
+    ;;utilidad del otro.
+    [
+      ask jugador1
+      [set jugador2 one-of other turtles] 
+      let aux-ut 0;; para borrar el exceso de utilidad
+      ask jugador2
+      [set aux-ut utilidad-total]
+      
+      juguemos jugador1 jugador2
+      ask jugador1
+      [set cont (cont - 1)]
+      ask jugador2
+      [set utilidad-total aux-ut]
+    ]
+    
+  ]
+  
+  ;; Que tengan hijos
+  
+  set m-utilidad-total mean [utilidad-total] of turtles
+  set s-utilidad-total standard-deviation [utilidad-total] of turtles
+  ;show m-utilidad-total
+  ;show s-utilidad-total
+  clear-output
+  output-show m-utilidad-total
+  set coop-gen []
+  ask turtles [porcentaje-c turtle who]
+  set m-coop-gen mean coop-gen
+  show "media cooperacion"
+  show m-coop-gen
+  show "sd cooperacion"
+  show standard-deviation coop-gen
+  
+  ask turtles with [utilidad-total > (m-utilidad-total + s-utilidad-total)]
+  [
+    let padre2 other turtles with [utilidad-total > (m-utilidad-total + s-utilidad-total)]
+    hatch 1
+    [
+      set cont 6 ;; Rondas que juegan antes de tener hijos
+      set historia [] ;; No se borra en otra parte?
+      set utilidad 0
+      set utilidad-total 0
+      cross-over turtle who padre2 ;; Herereda alrededor de la mitad de los genes
+      mutacion turtle who
+    ]
+  ]
+  
+  ask turtles with [utilidad-total > (m-utilidad-total - s-utilidad-total * 0.5)]
+  [
+    let padre2 other turtles with [utilidad-total > (m-utilidad-total - s-utilidad-total * 0.5)]
+    hatch 1
+    [
+      set cont 6 ;; Rondas que juegan antes de tener hijos
+      set historia [] ;; No se borra en otra parte?
+      set utilidad 0
+      set utilidad-total 0
+      cross-over turtle who padre2 ;; Herereda alrededor de la mitad de los genes
+      mutacion turtle who
+    ]
+  ]
+  
+  ask turtles with [cont = 0]
+  [die]
+  
+  ;; Para que siempre haya al menos el número inicial de pobladores
+  let n (poblacion - count turtles)
+  if (n > 0)
+  [publica n]
+    
+  tick
+end
+
+;;=====================================================================
+;; VARIABLES DE USO INTERNO
+;;=====================================================================
+
+
+;; Simula la estructura de un juego
+to juguemos [jugador1 jugador2]
+  set señal 0
+  set historia-señal []
+  ;;CAMBIAR ESTO CUANDO GRAFIQUE MEAN DE UTILIDAD
+  ;reset-ticks
+  
+  repeat rondas
+  [
+    elegir-accion (jugador1) 
+    elegir-accion (jugador2)
+    
+    pagos (jugador1) (jugador2)
+    pagos (jugador2) (jugador1)
+    
+    ask jugador1 
+    [
+      set historia lput accion historia
+      set utilidad-total (utilidad-total + utilidad)
+    ]
+    
+    ask jugador2
+    [
+      set historia lput accion historia
+      set utilidad-total (utilidad-total + utilidad)
+    ]
+    
+    Signal jugador1 jugador2
+    ;; Hacemos tick para graficar
+    ;tick
+  ]
+  
+  ;show "Señal"
+  ;show historia-señal
+  
+  ask jugador1
+  [
+    ;show estrategia
+    ;show historia
+    ;show utilidad-total
+    set historia [] ;; para reiniciar
+  ]
+   
+  ask jugador2
+  [
+    ;show estrategia
+    ;show historia
+    ;show utilidad-total
+    set historia [] ;; para reiniciar
+  ]
+  
+  ;show "."
+  
+end
+  
+
+
+;; El juego del DILEMA DEL PRISIONERO
+;; Entra un jugador, su accion y la del otro jugador
+;; Devuelve su PAGO
+to pagos [jugador1 jugador2]
+  ;; C - Cooperate
+  ;; D - Defect
+  ;; p1\p2  C   |  D  
+  ;;  C    3,3  | 0,5 
+  ;;  -   ------------
+  ;;  D    5,0  | 1,1 
+  
+  
+  ;;Variables temporales
+  let accion1 ""
+  let accion2 ""
+  ask jugador1
+    [set accion1 accion]
+  ask jugador2
+    [set accion2 accion]
+  ifelse ((accion1 = "C" or accion1 = "D") and (accion2 = "C" or accion2 = "D"))
+  [
+    if (accion1 = "C" and accion2 = "C")
+    [
+      ask jugador1 
+      [set utilidad 3]
+    ]
+    
+    if (accion1 = "C" and accion2 = "D")
+    [
+      ask jugador1 
+      [set utilidad 0]
+    ]
+    
+    if (accion1 = "D" and accion2 = "C")
+    [
+      ask jugador1 
+      [set utilidad 5]
+    ]
+    
+    if (accion1 = "D" and accion2 = "D")
+    [
+      ask jugador1 
+      [set utilidad 1]
+    ]
+  ]
+  ;; ELSE
+  [
+    show "Error: jugada inválida"
+    ask jugador1
+    [
+      set utilidad 10000 ;; Número arbitrariamente grande para notar el error
+    ]
+  ]
+end
+;----------------------------------------------------------------------
+
+;; Codifica las historias de ambos jugadores en una forma leíble de RTSP
+to Signal [jugador1 jugador2]
+  let historia1 []
+  ask jugador1
+  [set historia1 historia]
+  
+  if (historia1 != [])
+  [
+    let a1 last historia1
+    let a2 ""
+    ask jugador1
+    [set historia1 secuencia]
+    ask jugador2
+    [set a2 last historia]
+    
+    ;; MONITOREO
+    ;; +1 con proba p y -1 con proba 1 - p
+    ;; Probas:
+    ;; p1\p2  C   |  D  
+    ;;  C    0.75 | 0.5 
+    ;;  -   ------------
+    ;;  D    0.5  | 0.5 
+    
+    ifelse (a1 = "C" and a2 = "C") ;; Reward
+    [
+      ifelse (random-float 1 <= 0.75)
+      [
+        set señal (señal + 1)
+        set historia-señal lput "U" historia-señal
+      ]
+      [
+        set señal (señal - 1)
+        set historia-señal lput "D" historia-señal
+      ]
+    ]
+    ;; Todos los otro casos se comportan igual
+    [
+      ifelse (random-float 1 <= 0.5)
+      [
+        set señal (señal + 1)
+        set historia-señal lput "U" historia-señal
+      ]
+      [
+        set señal (señal - 1)
+        set historia-señal lput "D" historia-señal
+      ]
+    ]
+  ]
+    
+end
+
+
+;;=====================================================================
+;;  INSERTAR AQUÍ LAS NUEVAS JUGADAS
+;;=====================================================================
+;;=====================================================================
+;;=====================================================================
+;;=====================================================================
+;;Conforme a la estrategia y las historias, 
+;;elige la ACCION DEL JUGADOR1
+to elegir-accion [jugador1]
+    
+  ;;Elige accion
+  ask jugador1
+  [
+    ;;----------------------------------------------------------------
+    if (estrategia = "Publica")
+    [
+      genes-publico jugador1
+    ]
+    ;;----------------------------------------------------------------
+  ]
+  
+end
+
+;;=====================================================================
+;; COSAS QUE LLAMAN A LOS GENES
+;;=====================================================================
+
+;; Crea NUMERO tortugas con la estregia
+
+
+to publica [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Publica"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    set cont 6 ;; Cantidad de rondas
+    ;; Variables fisicas
+    set color blue + (20 - random 11)
+    set shape "circle"
+    setxy random-xcor random-ycor
+    ;----------------------------
+    ;; Los primeros seis genes describen una secuencia
+    ;; con la que se comienza (UP or DOWN)
+    set gen01 one-of ["U" "D"]
+    set gen02 one-of ["U" "D"]
+    set gen03 one-of ["U" "D"]
+    set gen04 one-of ["U" "D"]
+    set gen05 one-of ["U" "D"]
+    set gen06 one-of ["U" "D"]
+    ;; Secuencia
+    ;; Con todas las combinaciones eliges (COOPERATE or DEFECT)
+    set gen1 one-of ["C" "D"]
+    set gen2 one-of ["C" "D"]
+    set gen3 one-of ["C" "D"]
+    set gen4 one-of ["C" "D"]
+    set gen5 one-of ["C" "D"]
+    set gen6 one-of ["C" "D"]
+    set gen7 one-of ["C" "D"]
+    set gen8 one-of ["C" "D"]
+    set gen9 one-of ["C" "D"]
+    set gen10 one-of ["C" "D"]
+    set gen11 one-of ["C" "D"]
+    set gen12 one-of ["C" "D"]
+    set gen13 one-of ["C" "D"]
+    set gen14 one-of ["C" "D"]
+    set gen15 one-of ["C" "D"]
+    set gen16 one-of ["C" "D"]
+    set gen17 one-of ["C" "D"]
+    set gen18 one-of ["C" "D"]
+    set gen19 one-of ["C" "D"]
+    set gen20 one-of ["C" "D"]
+    set gen21 one-of ["C" "D"]
+    set gen22 one-of ["C" "D"]
+    set gen23 one-of ["C" "D"]
+    set gen24 one-of ["C" "D"]
+    set gen25 one-of ["C" "D"]
+    set gen26 one-of ["C" "D"]
+    set gen27 one-of ["C" "D"]
+    set gen28 one-of ["C" "D"]
+    set gen29 one-of ["C" "D"]
+    set gen30 one-of ["C" "D"]
+    set gen31 one-of ["C" "D"]
+    set gen32 one-of ["C" "D"]
+    set gen33 one-of ["C" "D"]
+    set gen34 one-of ["C" "D"]
+    set gen35 one-of ["C" "D"]
+    set gen36 one-of ["C" "D"]
+    set gen37 one-of ["C" "D"]
+    set gen38 one-of ["C" "D"]
+    set gen39 one-of ["C" "D"]
+    set gen40 one-of ["C" "D"]
+    set gen41 one-of ["C" "D"]
+    set gen42 one-of ["C" "D"]
+    set gen43 one-of ["C" "D"]
+    set gen44 one-of ["C" "D"]
+    set gen45 one-of ["C" "D"]
+    set gen46 one-of ["C" "D"]
+    set gen47 one-of ["C" "D"]
+    set gen48 one-of ["C" "D"]
+    set gen49 one-of ["C" "D"]
+    set gen50 one-of ["C" "D"]
+    set gen51 one-of ["C" "D"]
+    set gen52 one-of ["C" "D"]
+    set gen53 one-of ["C" "D"]
+    set gen54 one-of ["C" "D"]
+    set gen55 one-of ["C" "D"]
+    set gen56 one-of ["C" "D"]
+    set gen57 one-of ["C" "D"]
+    set gen58 one-of ["C" "D"]
+    set gen59 one-of ["C" "D"]
+    set gen60 one-of ["C" "D"]
+    set gen61 one-of ["C" "D"]
+    set gen62 one-of ["C" "D"]
+    set gen63 one-of ["C" "D"]
+    set gen64 one-of ["C" "D"]   
+  ]
+end
+
+
+;; Elige acción según tus genes
+to genes-publico [jugador1]
+  ask jugador1
+  [
+    ifelse (historia-señal = [])
+    ;;Cuando comienza el juego los genes00 forman la presecuencia.
+    [
+      set secuencia []
+      set secuencia lput gen01 secuencia
+      set secuencia lput gen02 secuencia
+      set secuencia lput gen03 secuencia
+      set secuencia lput gen04 secuencia
+      set secuencia lput gen05 secuencia
+      set secuencia lput gen06 secuencia
+    ]
+    [
+      set secuencia lput (last historia-señal) secuencia
+      set secuencia but-first secuencia
+    ]
+      ;; Secuencia completa:
+    if(secuencia = ["U"  "U"  "U"  "U"  "U"  "U"])
+    [set accion gen1]
+    if(secuencia = ["U"  "U"  "U"  "U"  "U"  "D"])
+    [set accion gen2]
+    if(secuencia = ["U"  "U"  "U"  "U"  "D"  "U"])
+    [set accion gen3]
+    if(secuencia = ["U"  "U"  "U"  "U"  "D"  "D"])
+    [set accion gen4]
+    if(secuencia = ["U"  "U"  "U"  "D"  "U"  "U"])
+    [set accion gen5]
+    if(secuencia = ["U"  "U"  "U"  "D"  "U"  "D"])
+    [set accion gen6]
+    if(secuencia = ["U"  "U"  "U"  "D"  "D"  "U"])
+    [set accion gen7]
+    if(secuencia = ["U"  "U"  "U"  "D"  "D"  "D"])
+    [set accion gen8]
+    if(secuencia = ["U"  "U"  "D"  "U"  "U"  "U"])
+    [set accion gen9]
+    if(secuencia = ["U"  "U"  "D"  "U"  "U"  "D"])
+    [set accion gen10]
+    if(secuencia = ["U"  "U"  "D"  "U"  "D"  "U"])
+    [set accion gen11]
+    if(secuencia = ["U"  "U"  "D"  "U"  "D"  "D"])
+    [set accion gen12]
+    if(secuencia = ["U"  "U"  "D"  "D"  "U"  "U"])
+    [set accion gen13]
+    if(secuencia = ["U"  "U"  "D"  "D"  "U"  "D"])
+    [set accion gen14]
+    if(secuencia = ["U"  "U"  "D"  "D"  "D"  "U"])
+    [set accion gen15]
+    if(secuencia = ["U"  "U"  "D"  "D"  "D"  "D"])
+    [set accion gen16]
+    if(secuencia = ["U"  "D"  "U"  "U"  "U"  "U"])
+    [set accion gen17]
+    if(secuencia = ["U"  "D"  "U"  "U"  "U"  "D"])
+    [set accion gen18]
+    if(secuencia = ["U"  "D"  "U"  "U"  "D"  "U"])
+    [set accion gen19]
+    if(secuencia = ["U"  "D"  "U"  "U"  "D"  "D"])
+    [set accion gen20]
+    if(secuencia = ["U"  "D"  "U"  "D"  "U"  "U"])
+    [set accion gen21]
+    if(secuencia = ["U"  "D"  "U"  "D"  "U"  "D"])
+    [set accion gen22]
+    if(secuencia = ["U"  "D"  "U"  "D"  "D"  "U"])
+    [set accion gen23]
+    if(secuencia = ["U"  "D"  "U"  "D"  "D"  "D"])
+    [set accion gen24]
+    if(secuencia = ["U"  "D"  "D"  "U"  "U"  "U"])
+    [set accion gen25]
+    if(secuencia = ["U"  "D"  "D"  "U"  "U"  "D"])
+    [set accion gen26]
+    if(secuencia = ["U"  "D"  "D"  "U"  "D"  "U"])
+    [set accion gen27]
+    if(secuencia = ["U"  "D"  "D"  "U"  "D"  "D"])
+    [set accion gen28]
+    if(secuencia = ["U"  "D"  "D"  "D"  "U"  "U"])
+    [set accion gen29]
+    if(secuencia = ["U"  "D"  "D"  "D"  "U"  "D"])
+    [set accion gen30]
+    if(secuencia = ["U"  "D"  "D"  "D"  "D"  "U"])
+    [set accion gen31]
+    if(secuencia = ["U"  "D"  "D"  "D"  "D"  "D"])
+    [set accion gen32]
+    if(secuencia = ["D"  "U"  "U"  "U"  "U"  "U"])
+    [set accion gen33]
+    if(secuencia = ["D"  "U"  "U"  "U"  "U"  "D"])
+    [set accion gen34]
+    if(secuencia = ["D"  "U"  "U"  "U"  "D"  "U"])
+    [set accion gen35]
+    if(secuencia = ["D"  "U"  "U"  "U"  "D"  "D"])
+    [set accion gen36]
+    if(secuencia = ["D"  "U"  "U"  "D"  "U"  "U"])
+    [set accion gen37]
+    if(secuencia = ["D"  "U"  "U"  "D"  "U"  "D"])
+    [set accion gen38]
+    if(secuencia = ["D"  "U"  "U"  "D"  "D"  "U"])
+    [set accion gen39]
+    if(secuencia = ["D"  "U"  "U"  "D"  "D"  "D"])
+    [set accion gen40]
+    if(secuencia = ["D"  "U"  "D"  "U"  "U"  "U"])
+    [set accion gen41]
+    if(secuencia = ["D"  "U"  "D"  "U"  "U"  "D"])
+    [set accion gen42]
+    if(secuencia = ["D"  "U"  "D"  "U"  "D"  "U"])
+    [set accion gen43]
+    if(secuencia = ["D"  "U"  "D"  "U"  "D"  "D"])
+    [set accion gen44]
+    if(secuencia = ["D"  "U"  "D"  "D"  "U"  "U"])
+    [set accion gen45]
+    if(secuencia = ["D"  "U"  "D"  "D"  "U"  "D"])
+    [set accion gen46]
+    if(secuencia = ["D"  "U"  "D"  "D"  "D"  "U"])
+    [set accion gen47]
+    if(secuencia = ["D"  "U"  "D"  "D"  "D"  "D"])
+    [set accion gen48]
+    if(secuencia = ["D"  "D"  "U"  "U"  "U"  "U"])
+    [set accion gen49]
+    if(secuencia = ["D"  "D"  "U"  "U"  "U"  "D"])
+    [set accion gen50]
+    if(secuencia = ["D"  "D"  "U"  "U"  "D"  "U"])
+    [set accion gen51]
+    if(secuencia = ["D"  "D"  "U"  "U"  "D"  "D"])
+    [set accion gen52]
+    if(secuencia = ["D"  "D"  "U"  "D"  "U"  "U"])
+    [set accion gen53]
+    if(secuencia = ["D"  "D"  "U"  "D"  "U"  "D"]) 
+    [set accion gen54]
+    if(secuencia = ["D"  "D"  "U"  "D"  "D"  "U"])  
+    [set accion gen55]
+    if(secuencia = ["D"  "D"  "U"  "D"  "D"  "D"])   
+    [set accion gen56]
+    if(secuencia = ["D"  "D"  "D"  "U"  "U"  "U"])    
+    [set accion gen57]
+    if(secuencia = ["D"  "D"  "D"  "U"  "U"  "D"])     
+    [set accion gen58]
+    if(secuencia = ["D"  "D"  "D"  "U"  "D"  "U"])      
+    [set accion gen59]
+    if(secuencia = ["D"  "D"  "D"  "U"  "D"  "D"])   
+    [set accion gen60]
+    if(secuencia = ["D"  "D"  "D"  "D"  "U"  "U"])    
+    [set accion gen61]
+    if(secuencia = ["D"  "D"  "D"  "D"  "U"  "D"])     
+    [set accion gen62]
+    if(secuencia = ["D"  "D"  "D"  "D"  "D"  "U"])    
+    [set accion gen63]
+    if(secuencia = ["D"  "D"  "D"  "D"  "D"  "D"])
+    [set accion gen64]
+      
+  ]
+end
+
+
+to mutacion [jugador1]
+  if (random-float 1 < proba-mutar)
+  [
+    let gen (1 + random 70)
+    ask jugador1
+    [
+      if gen = 1
+      [set gen1 (remove gen1 "CD")]
+      if gen = 2
+      [set gen2 (remove gen2 "CD")]
+      if gen = 3
+      [set gen3 (remove gen3 "CD")]
+      if gen = 4
+      [set gen4 (remove gen4 "CD")]
+      if gen = 5
+      [set gen5 (remove gen5 "CD")]
+      if gen = 6
+      [set gen6 (remove gen6 "CD")]
+      if gen = 7
+      [set gen7 (remove gen7 "CD")]
+      if gen = 8
+      [set gen8 (remove gen8 "CD")]
+      if gen = 9
+      [set gen9 (remove gen9 "CD")]
+      if gen = 10
+      [set gen10 (remove gen10 "CD")]
+      if gen = 11
+      [set gen11 (remove gen11 "CD")]
+      if gen = 12
+      [set gen12 (remove gen12 "CD")]
+      if gen = 13
+      [set gen13 (remove gen13 "CD")]
+      if gen = 14
+      [set gen14 (remove gen14 "CD")]
+      if gen = 15
+      [set gen15 (remove gen15 "CD")]
+      if gen = 16
+      [set gen16 (remove gen16 "CD")]
+      if gen = 17
+      [set gen17 (remove gen17 "CD")]
+      if gen = 18
+      [set gen18 (remove gen18 "CD")]
+      if gen = 19
+      [set gen19 (remove gen19 "CD")]
+      if gen = 20
+      [set gen20 (remove gen20 "CD")]
+      if gen = 21
+      [set gen21 (remove gen21 "CD")]
+      if gen = 22
+      [set gen22 (remove gen22 "CD")]
+      if gen = 23
+      [set gen23 (remove gen23 "CD")]
+      if gen = 24
+      [set gen24 (remove gen24 "CD")]
+      if gen = 25
+      [set gen25 (remove gen25 "CD")]
+      if gen = 26
+      [set gen26 (remove gen26 "CD")]
+      if gen = 27
+      [set gen27 (remove gen27 "CD")]
+      if gen = 28
+      [set gen28 (remove gen28 "CD")]
+      if gen = 29
+      [set gen29 (remove gen29 "CD")]
+      if gen = 30
+      [set gen30 (remove gen30 "CD")]
+      if gen = 31
+      [set gen31 (remove gen31 "CD")]
+      if gen = 32
+      [set gen32 (remove gen32 "CD")]
+      if gen = 33
+      [set gen33 (remove gen33 "CD")]
+      if gen = 34
+      [set gen34 (remove gen34 "CD")]
+      if gen = 35
+      [set gen35 (remove gen35 "CD")]
+      if gen = 36
+      [set gen36 (remove gen36 "CD")]
+      if gen = 37
+      [set gen37 (remove gen37 "CD")]
+      if gen = 38
+      [set gen38 (remove gen38 "CD")]
+      if gen = 39
+      [set gen39 (remove gen39 "CD")]
+      if gen = 40
+      [set gen40 (remove gen40 "CD")]
+      if gen = 41
+      [set gen41 (remove gen41 "CD")]
+      if gen = 42
+      [set gen42 (remove gen42 "CD")]
+      if gen = 43
+      [set gen43 (remove gen43 "CD")]
+      if gen = 44
+      [set gen44 (remove gen44 "CD")]
+      if gen = 45
+      [set gen45 (remove gen45 "CD")]
+      if gen = 46
+      [set gen46 (remove gen46 "CD")]
+      if gen = 47
+      [set gen47 (remove gen47 "CD")]
+      if gen = 48
+      [set gen48 (remove gen48 "CD")]
+      if gen = 49
+      [set gen49 (remove gen49 "CD")]
+      if gen = 50
+      [set gen50 (remove gen50 "CD")]
+      if gen = 51
+      [set gen51 (remove gen51 "CD")]
+      if gen = 52
+      [set gen52 (remove gen52 "CD")]
+      if gen = 53
+      [set gen53 (remove gen53 "CD")]
+      if gen = 54
+      [set gen54 (remove gen54 "CD")]
+      if gen = 55
+      [set gen55 (remove gen55 "CD")]
+      if gen = 56
+      [set gen56 (remove gen56 "CD")]
+      if gen = 57
+      [set gen57 (remove gen57 "CD")]
+      if gen = 58
+      [set gen58 (remove gen58 "CD")]
+      if gen = 59
+      [set gen59 (remove gen59 "CD")]
+      if gen = 60
+      [set gen60 (remove gen60 "CD")]
+      if gen = 61
+      [set gen61 (remove gen61 "CD")]
+      if gen = 62
+      [set gen62 (remove gen62 "CD")]
+      if gen = 63
+      [set gen63 (remove gen63 "CD")]
+      if gen = 64
+      [set gen64 (remove gen64 "CD")]
+      
+      ;;Los iniciales
+      if gen = 65
+      [set gen01 (remove gen01 "UD")]
+      if gen = 66
+      [set gen02 (remove gen02 "UD")]
+      if gen = 67
+      [set gen03 (remove gen03 "UD")]
+      if gen = 68
+      [set gen04 (remove gen04 "UD")]
+      if gen = 69
+      [set gen05 (remove gen05 "UD")]
+      if gen = 70
+      [set gen06 (remove gen06 "UD")]
+      
+    ]
+    ;show "yey, muté!"
+  ]
+  
+end
+
+
+to cross-over [hijo padre2]
+  if (padre2 != nobody)
+  [
+    ask hijo
+    [
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen1]
+        set gen1 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen2]
+        set gen2 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen3]
+        set gen3 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen4]
+        set gen4 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen5]
+        set gen5 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen6]
+        set gen6 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen7]
+        set gen7 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen8]
+        set gen8 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen9]
+        set gen9 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen10]
+        set gen10 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen11]
+        set gen11 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen12]
+        set gen12 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen13]
+        set gen13 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen14]
+        set gen14 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen15]
+        set gen15 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen16]
+        set gen16 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen17]
+        set gen17 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen18]
+        set gen18 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen19]
+        set gen19 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen20]
+        set gen20 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen21]
+        set gen21 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen22]
+        set gen22 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen23]
+        set gen23 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen24]
+        set gen24 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen25]
+        set gen25 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen26]
+        set gen26 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen27]
+        set gen27 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen28]
+        set gen28 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen29]
+        set gen29 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen30]
+        set gen30 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen31]
+        set gen31 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen32]
+        set gen32 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen33]
+        set gen33 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen34]
+        set gen34 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen35]
+        set gen35 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen36]
+        set gen36 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen37]
+        set gen37 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen38]
+        set gen38 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen39]
+        set gen39 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen40]
+        set gen40 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen41]
+        set gen41 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen42]
+        set gen42 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen43]
+        set gen43 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen44]
+        set gen44 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen45]
+        set gen45 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen46]
+        set gen46 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen47]
+        set gen47 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen48]
+        set gen48 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen49]
+        set gen49 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen50]
+        set gen50 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen51]
+        set gen51 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen52]
+        set gen52 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen53]
+        set gen53 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen54]
+        set gen54 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen55]
+        set gen55 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen56]
+        set gen56 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen57]
+        set gen57 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen58]
+        set gen58 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen59]
+        set gen59 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen60]
+        set gen60 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen61]
+        set gen61 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen62]
+        set gen62 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen63]
+        set gen63 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen64]
+        set gen64 gen
+      ]
+      
+      ;; Variables inicializadoras
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen01]
+        set gen01 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen02]
+        set gen02 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen03]
+        set gen03 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen04]
+        set gen04 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen05]
+        set gen05 gen
+      ]
+      if (random-float 1 <= uniform-crossover)
+      [
+        let gen ""
+        ask padre2 [set gen gen06]
+        set gen06 gen
+      ]
+    ]
+  ]
+end
+
+
+;; Vamos a contar la cantidad de C (Cooperación) que tienen los individuos.
+to porcentaje-c [jugador1]
+  let conteo-c 0
+  ask jugador1
+  [
+    if (gen1 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen2 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen3 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen4 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen5 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen6 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen7 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen8 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen9 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen10 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen11 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen12 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen13 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen14 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen15 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen16 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen17 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen18 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen19 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen20 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen21 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen22 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen23 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen24 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen25 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen26 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen27 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen28 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen29 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen30 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen31 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen32 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen33 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen34 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen35 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen36 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen37 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen38 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen39 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen40 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen41 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen42 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen43 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen44 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen45 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen46 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen47 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen48 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen49 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen50 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen51 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen52 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen53 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen54 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen55 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen56 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen57 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen58 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen59 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen60 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen61 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen62 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen63 = "C")
+    [set conteo-c (conteo-c + 1)]
+    if (gen64 = "C")
+    [set conteo-c (conteo-c + 1)]
+  ]
+  set conteo-c (conteo-c / 64)
+  set coop-gen lput conteo-c coop-gen
+end
