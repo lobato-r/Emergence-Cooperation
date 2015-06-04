@@ -1,0 +1,352 @@
+;; ===================================================================== ;;
+;; ===================================================================== ;;
+;; ===================================================================== ;;
+;; ===================== THE EMERGENCE OF COOPERATION ================== ;;
+;; ============================ ARTURO MARQUEZ ========================= ;;
+;; ===================================================================== ;;
+;; ===================================================================== ;;
+;; ===================================================================== ;;
+
+globals[
+  
+  strategies ;; list
+  fitnessTransition ;; list
+  vecinosTransition ;; list
+  aux
+  aux2
+  aux3
+]
+
+patches-own [
+  
+  strategy ;; String
+  action   ;; String
+  fitness  ;; list
+  averFitness ;; float
+  history  ;; list
+  aux-int
+  aux-str
+  vecinos ;; list
+  totalFitness;; list
+  averTotalFitness;; float
+]
+
+
+
+to setup
+  ca 
+  
+  set strategies ["Always-Cooperate" "Always-Defect" "Tit-for-Tat" "Random-Strategy" "Tit-for-Two-Tats" "Eatherly"]
+
+  ask patches[
+   set strategy one-of strategies;; This needs to be random across patches! 
+   set action "";; According to strategy and history
+   set fitness [] ;;This list will contain the fitness for each PrisDil played in one round
+   set totalFitness []
+   set history [[][][][]] ;; The history will show the actions played by the agent at each round.
+   set aux-str ""
+   set vecinos []
+   
+   ask neighbors4[
+     set aux self
+     ask myself [set vecinos lput aux vecinos]
+     ]
+   
+  ]
+ 
+  set fitnessTransition []
+  set vecinosTransition []
+  
+  
+end  
+
+
+
+
+to play
+  
+
+repeat T [  
+  
+  set aux []
+  
+  ask patches [
+    
+   set aux2 self 
+   set fitness [] 
+   set averFitness 0
+
+    
+   foreach vecinos [
+     set aux3 ?
+     elegir-accion aux2 aux3
+     elegir-accion aux3 aux2
+     PrisDil aux2 aux3
+     
+     ask aux2 [
+       set aux (item (position aux3 vecinos) history)
+       set aux lput ([action] of aux2) aux
+       set history replace-item (position aux3 vecinos) history aux
+       set aux []
+       ] 
+   ]
+   
+    
+   set averFitness mean fitness
+   
+   set totalFitness fput averFitness totalFitness
+   
+   set averTotalFitness mean totalFitness
+   
+   ;;show strategy
+   ;;show history
+   ;;show averFitness
+   
+   
+  ]
+  
+] 
+   
+  transition ;; This defines the dynamics of the simulation. The "best" in the round will go on to the next one.
+  
+end
+
+
+to PrisDil [ patch1 patch2 ]  
+  
+  
+  let action1 ""
+  let action2 ""
+  
+  ask patch1 [set action1 action]
+  ask patch2 [set action2 action]
+  
+  ifelse ((action1 = "C" or action1 = "D") and (action2 = "C" or action2 = "D"))
+  [
+    if (action1 = "C" and action2 = "C")
+    [
+      ask patch1
+      [set fitness fput 3 fitness]
+    ]
+    
+    if (action1 = "C" and action2 = "D")
+    [
+      ask patch1 
+      [set fitness fput 0 fitness]
+    ]
+    
+    if (action1 = "D" and action2 = "C")
+    [
+      ask patch1
+      [set fitness fput 5 fitness]
+    ]
+    
+    if (action1 = "D" and action2 = "D")
+    [
+      ask patch1
+      [set fitness fput 1 fitness]
+    ]
+  ]
+  ;; ELSE
+  [
+    show "Error: jugada inválida" 
+    ask patch1
+    [
+      set fitness fput 10000 fitness ;; Número arbitrariamente grande para notar el error
+    ]
+  ]
+
+  
+  
+  
+end  
+
+to elegir-accion [patch1 patch2]
+  
+  ;;Variables temporales  
+  let historia1 []
+  let historia2 []
+  ask patch1
+    [set historia1 item (position patch2 [vecinos] of patch1) history] 
+  ask patch2
+    [set historia2 item (position patch1 [vecinos] of patch2) history]
+    
+  ;;Elige accion
+  ask patch1
+  [
+    ;;----------------------------------------------------------------
+    if (strategy = "Always-Cooperate")
+    [
+      set pcolor green
+      ifelse (historia1 = [])
+      ;; La primera acción
+      [set action "C"]
+      ;; El resto de la estretegia
+      [
+        set action "C"
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (strategy = "Always-Defect")
+    [ 
+      set pcolor red
+      ifelse (historia1 = [])
+      ;; La primera acción
+      [set action "D"]
+      ;; El resto de la estretegia
+      [
+        set action "D"
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (strategy = "Tit-for-Tat")
+    [
+      set pcolor blue
+      ifelse (historia1 = [])
+      ;; La primera acción es cooperar
+      [set action "C"]
+      ;; El resto de la estretegia
+      [
+        ;;Elijo lo último que jugó el otro jugador
+        ifelse (historia2 = [])
+        [set action "C"]
+        [set action last historia2]
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (strategy = "Random-Strategy")
+    [
+      set pcolor yellow
+      ifelse (random-float 1 >= 0.5)
+      ;; Aleatorio con probabilidad 0.5
+      [set action "C"]
+      [set action "D"]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (strategy = "Tit-for-Two-Tats")
+    [
+      set pcolor cyan
+      ;;Tit for tat pero perdona un Defect más
+      set action "C"
+      if (length historia1 >= 2)
+      [
+        ifelse(length historia2 >= 2)
+        [if (last historia2 = "D" and last (but-last historia2) = "D") [set action "D"] ]
+        [set action "C"]
+      ]   
+      
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (strategy = "Tester") ;; Tester no está incluido. Hay un error! REVISAR
+    [
+      set pcolor 12
+      ;;Primer paso Defect
+      ;;Cuando le responden defect, coopera y cambia a Tit for Tat.
+      ;;De lo contrario 2, 3 coopera y de ahí hace defect cada dos juegos:
+      ;;Par defect, impar cooperate
+      ifelse (historia1 = [])
+      ;; La primera acción es defect
+      [
+        set action "D"
+        set aux-str "C"
+      ]
+      ;; El resto de la estretegia
+      [
+        ifelse (aux-str = "tft")
+        [ifelse (historia2 = [])
+          [set action "D"]
+          [set action last historia2] ]
+        [
+          ifelse (length historia1 = 2)
+          [
+            ;;Tercer paso coopera si no es tft
+            set action "C"
+            set aux-str "D"
+          ]
+          [
+            set action aux-str
+            set aux-str remove aux-str "CD" ;; Esto sirve para que vaya alternando
+           ;;después del 3 turno.
+          ] 
+        ]
+        ifelse (historia2 = [])
+        [set action "D"]
+        [
+          if (aux-str != "tft" and (last historia2) = "D")
+          [;; revisar es lo último que hace o si no lo cambia
+            set action "C" ;; Hizo defect por primera vez
+            set aux-str "tft" ;; Coopero y cambio a tit for tat
+          ]
+        ]
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (strategy = "Eatherly")
+    [
+      set pcolor white
+      ;; Comienza cooperando y hace defect con probabilidad igual al ratio
+      ;;entre los defects del oponent y los juegos jugados.
+      ifelse (historia1 = [])
+      [set action "C"]
+      [
+        ifelse (historia2 = [])
+        [set action "D"]
+        [if (last historia2 = "D")
+          [set aux-int (aux-int + 1)] ;; reviso (primero) si hubo defect
+        ]
+        ifelse (aux-int = 0)
+        ;; Mientras no haya defect, yo tampoco.
+        [set action "C"]
+        ;; Defect con probabilidad igual al ratio de tus defects
+        [
+          ifelse (historia2 = [])
+          [set action "D"]
+          [
+            ifelse (random-float 1 < (aux-int / length historia2))
+            [set action "D"]
+            [set action "C"]
+          ]
+        ]        
+      ]
+    ]
+    
+  ]
+  
+end
+
+to transition
+  
+  set fitnessTransition []
+  set vecinosTransition []
+  
+  ask patches [
+    
+   ;;show strategy
+   ;;show history
+   ;;show averTotalFitness
+    
+    set fitnessTransition fput averTotalFitness fitnessTransition
+    set vecinosTransition fput self vecinosTransition
+    ask neighbors4 [
+      set vecinosTransition fput self vecinosTransition
+      set fitnessTransition fput ([averTotalFitness] of self) fitnessTransition
+      ] 
+    set strategy ([strategy] of item (position max fitnessTransition fitnessTransition) vecinosTransition)
+
+    set fitnessTransition []
+    set vecinosTransition []
+  ]
+  
+  ask patches[
+   set history [[][][][]] 
+   set fitness []
+   set totalFitness []
+  ]
+  
+end  
