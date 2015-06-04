@@ -1,0 +1,671 @@
+;;=====================================================================
+;;       Axelrod's Tournament
+;;               -or-
+;;    The Emergence of Cooperation
+;;=====================================================================
+;; Roberto Lobato López
+;;    129883
+;;
+;; Sistemas Complejos Adaptativos
+;;=====================================================================
+
+turtles-own [estrategia ;; String - Nombre de la estrategia que usa el agente
+             accion ;; String - Accion que juega en cada turno segun la estrategia y la historia
+             historia ;; List - conjunto de acciones jugadas
+             utilidad
+             utilidad-total
+             aux ;; auxiliar en caso de necesitarse
+;------------GENES----------------------------------------------
+             gen1
+             gen2
+             gen3
+             gen4
+             gen5
+             gen6
+             gen7
+             gen8
+             gen9
+             gen10
+             gen11
+             gen12
+             gen13
+             gen14
+             gen15
+             gen16
+             gen0
+             gen00 
+             gen01  
+             historiaRTSP      
+            ]
+globals [history1 history2]
+
+
+
+to SetUp
+  ca
+  reset-ticks
+end
+
+
+
+;;=====================================================================
+;;COSAS POR HACER:
+;;  INTENTAR CAMBIAR TURTLE # - 1 POR JUGADOR #
+;;=====================================================================
+
+to Primer-Torneo
+  show "--------------------------------------------------------------"
+  show "        PRIMER TORNEO DE AXELROD"
+  show "--------------------------------------------------------------"
+  todos 1
+  let n count turtles
+  let i 0
+  while [ i < n]
+  [
+    let j (i + 1)
+    
+    while [j < n]
+    [
+      juguemos turtle i turtle j
+      ;ask turtle i
+      ;[set historia [] ]
+      ;ask turtle j
+      ;[set historia [] ]
+      set j (j + 1)
+    ]
+     
+    set i (i + 1)
+  ]
+  ;; Falta que jueguen contra sí mismos
+  todos 1
+  set i 0
+  while [i < n]
+  [
+    juguemos turtle i turtle (i + n)
+    ask turtle (i + n)
+    [die] ;; Eliminamos la evidencia
+    set i (i + 1)
+  ]
+  ask turtles
+  [
+    show estrategia
+    show utilidad-total
+  ]
+  show "--------------------------------------------------------------"
+end
+
+;; juego entre siempre cooperar
+to ac-vs-ac
+  always-cooperate 2
+  juguemos turtle 0 turtle 1
+end
+
+to ac-vs-ad
+  always-cooperate 1
+  Always-Defect 1
+  juguemos turtle 0 turtle 1
+end
+
+to tft-vs-ad
+  Tit-For-Tat 1
+  Always-Defect 1
+  juguemos turtle 0 turtle 1
+end
+
+to tftt-vs-random
+  Tit-For-Two-Tats 1
+  Random-Strategy 1
+  juguemos turtle 0 turtle 1
+end
+
+to test-vs-eat
+  tester 1
+  eatherly 1
+  juguemos turtle 0 turtle 1
+end
+
+to first-gen
+  x-men 2
+  juguemos turtle 0 turtle 1
+end
+
+;;=====================================================================
+;; VARIABLES DE USO INTERNO
+;;=====================================================================
+
+;; Hace numero de todas las estrategias
+to todos [numero]
+  ;1.-
+  always-cooperate numero
+  ;2.-
+  Always-Defect numero
+  ;3.-
+  Tit-For-Tat numero
+  ;4.-
+  Tit-For-Two-Tats numero
+  ;5.-
+  Random-Strategy numero
+  ;6.-
+  tester numero
+  ;7.-
+  eatherly numero
+end
+  
+;; Simula la estructura de un juego
+to juguemos [jugador1 jugador2]
+  repeat rondas
+  [
+    elegir-accion (jugador1) (jugador2)
+    elegir-accion (jugador2) (jugador1)
+    
+    pagos (jugador1) (jugador2)
+    pagos (jugador2) (jugador1)
+    
+    ask jugador1 
+    [
+      set historia lput accion historia
+      set utilidad-total (utilidad-total + utilidad)
+    ]
+    
+    ask jugador2
+    [
+      set historia lput accion historia
+      set utilidad-total (utilidad-total + utilidad)
+    ]
+  ]
+  
+  ask jugador1
+  [
+    show estrategia
+    show historia
+    show utilidad-total
+    set aux 0
+    set historia [] ;; para reiniciar
+  ]
+   
+  ask jugador2
+  [
+    show estrategia
+    show historia
+    show utilidad-total
+    set aux 0
+    set historia [] ;; para reiniciar
+  ]
+  show "."
+  
+end
+  
+
+
+;; El juego del DILEMA DEL PRISIONERO
+;; Entra un jugador, su accion y la del otro jugador
+;; Devuelve su PAGO
+to pagos [jugador1 jugador2]
+  ;; C - Cooperate
+  ;; D - Defect
+  ;; p1\p2  C   |  D  
+  ;;  C    3,3  | 0,5 
+  ;;  -   ------------
+  ;;  D    5,0  | 1,1 
+  
+  
+  ;;Variables temporales
+  let accion1 ""
+  let accion2 ""
+  ask jugador1
+    [set accion1 accion]
+  ask jugador2
+    [set accion2 accion]
+  ifelse ((accion1 = "C" or accion1 = "D") and (accion2 = "C" or accion2 = "D"))
+  [
+    if (accion1 = "C" and accion2 = "C")
+    [
+      ask jugador1 
+      [set utilidad 3]
+    ]
+    
+    if (accion1 = "C" and accion2 = "D")
+    [
+      ask jugador1 
+      [set utilidad 0]
+    ]
+    
+    if (accion1 = "D" and accion2 = "C")
+    [
+      ask jugador1 
+      [set utilidad 5]
+    ]
+    
+    if (accion1 = "D" and accion2 = "D")
+    [
+      ask jugador1 
+      [set utilidad 1]
+    ]
+  ]
+  ;; ELSE
+  [
+    show "Error: jugada inválida"
+    ask jugador1
+    [
+      set utilidad 10000 ;; Número arbitrariamente grande para notar el error
+    ]
+  ]
+end
+;----------------------------------------------------------------------
+
+;; Codifica las historias de ambos jugadores en una forma leíble de RTSP
+to RTSP [jugador1 jugador2]
+  let historia1 []
+  ask jugador1
+  [set historia1 historia]
+  
+  if (historia1 != [])
+  [
+    let a1 last historia1
+    let a2 ""
+    ask jugador1
+    [set historia1 historiaRTSP]
+    ask jugador2
+    [set a2 last historia]
+    
+    if (a1 = "C" and a2 = "C")
+    [set historia1 lput "R" historia1] ;; Reward
+    if (a1 = "D" and a2 = "C")
+    [set historia1 lput "T" historia1] ;; Temptation
+    if (a1 = "C" and a2 = "D")
+    [set historia1 lput "S" historia1] ;; Sucker
+    if (a1 = "D" and a2 = "D")
+    [set historia1 lput "P" historia1] ;; Punishment
+    
+    
+    if (length historia1 > 2) ;; Solo necesitamos saber 2 elementos
+    [set historia1 but-first historia1]
+  ]
+  
+  ask jugador1
+  [set historiaRTSP historia1]
+end
+
+
+;; Elige acción según tus genes
+to genes [jugador1]
+  ask jugador1
+  [
+    if (historiaRTSP = [])
+    [set accion gen0]
+    ;; Revisar esta parte para no necesitar muchos genes más
+    if(length historiaRTSP = 1 )
+    [set accion gen00]
+    
+    ;1
+    if(historiaRTSP = ["R" "R"])
+    [set accion gen1]
+    ;2
+    if(historiaRTSP = ["R" "T"])
+    [set accion gen2]
+    ;3
+    if(historiaRTSP = ["R" "S"])
+    [set accion gen3]
+    ;4
+    if(historiaRTSP = ["R" "P"])
+    [set accion gen4]
+    ;5
+    if(historiaRTSP = ["T" "R"])
+    [set accion gen5]
+    ;6
+    if(historiaRTSP = ["T" "T"])
+    [set accion gen6]
+    ;7
+    if(historiaRTSP = ["T" "S"])
+    [set accion gen7]
+    ;8
+    if(historiaRTSP = ["T" "P"])
+    [set accion gen8]
+    ;9
+    if(historiaRTSP = ["S" "R"])
+    [set accion gen9]
+    ;10
+    if(historiaRTSP = ["S" "T"])
+    [set accion gen10]
+    ;11
+    if(historiaRTSP = ["S" "S"])
+    [set accion gen11]
+    ;12
+    if(historiaRTSP = ["S" "P"])
+    [set accion gen12]
+    ;13
+    if(historiaRTSP = ["P" "R"])
+    [set accion gen13]
+    ;14
+    if(historiaRTSP = ["P" "T"])
+    [set accion gen14]
+    ;15
+    if(historiaRTSP = ["P" "S"])
+    [set accion gen15]
+    ;16
+    if(historiaRTSP = ["P" "P"])
+    [set accion gen16] 
+  ]
+end
+
+;;=====================================================================
+;;=====================================================================
+;;=====================================================================
+;;=====================================================================
+;;=====================================================================
+;;  INSERTAR AQUÍ LAS NUEVAS JUGADAS
+;;=====================================================================
+;;=====================================================================
+;;=====================================================================
+;;=====================================================================
+;;Conforme a la estrategia y las historias, 
+;;elige la ACCION DEL JUGADOR1
+to elegir-accion [jugador1 jugador2]
+  
+  ;;Variables temporales
+  let historia1 []
+  let historia2 []
+  ask jugador1
+    [set historia1 historia] 
+  ask jugador2
+    [set historia2 historia]
+    
+  ;;Elige accion
+  ask jugador1
+  [
+    ;;----------------------------------------------------------------
+    if (estrategia = "Always-Cooperate")
+    [
+      ifelse (historia1 = [])
+      ;; La primera acción
+      [set accion "C"]
+      ;; El resto de la estretegia
+      [
+        set accion "C"
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (estrategia = "Always-Defect")
+    [
+      ifelse (historia1 = [])
+      ;; La primera acción
+      [set accion "D"]
+      ;; El resto de la estretegia
+      [
+        set accion "D"
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (estrategia = "Tit-For-Tat")
+    [
+      ifelse (historia1 = [])
+      ;; La primera acción es cooperar
+      [set accion "C"]
+      ;; El resto de la estretegia
+      [
+        ;;Elijo lo último que jugó el otro jugador
+        set accion last historia2
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (estrategia = "Random-Strategy")
+    [
+      ifelse (random-float 1 >= 0.5)
+      ;; Aleatorio con probabilidad 0.5
+      [set accion "C"]
+      [set accion "D"]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (estrategia = "Tit-For-Two-Tats")
+    [
+      ;;Tit for tat pero perdona un Defect más
+      set accion "C"
+      if (length historia1 >= 2)
+      [
+        if (last historia2 = "D" and last (but-last historia2) = "D")
+        [set accion "D"]
+      ]   
+      
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (estrategia = "Tester")
+    [
+      ;;Primer paso Defect
+      ;;Cuando le responden defect, coopera y cambia a Tit for Tat.
+      ;;De lo contrario 2, 3 coopera y de ahí hace defect cada dos juegos:
+      ;;Par defect, impar cooperate
+      ifelse (historia1 = [])
+      ;; La primera acción es defect
+      [
+        set accion "D"
+        set aux "C"
+      ]
+      ;; El resto de la estretegia
+      [
+        ifelse (aux = "tft")
+        [set accion last historia2]
+        [
+          ifelse (length historia1 = 2)
+          [
+            ;;Tercer paso coopera si no es tft
+            set accion "C"
+            set aux "D"
+          ]
+          [
+            set accion aux
+            set aux remove aux "CD" ;; Esto sirve para que vaya alternando
+           ;;después del 3 turno.
+          ] 
+        ]
+        if (aux != "tft" and last historia2 = "D")
+        [;; revisar es lo último que hace o si no lo cambia
+          set accion "C" ;; Hizo defect por primera vez
+          set aux "tft" ;; Coopero y cambio a tit for tat
+        ]
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (estrategia = "Eatherly")
+    [
+      ;; Comienza cooperando y hace defect con probabilidad igual al ratio
+      ;;entre los defects del oponent y los juegos jugados.
+      ifelse (historia1 = [])
+      [set accion "C"]
+      [
+        if (last historia2 = "D")
+          [set aux (aux + 1)] ;; reviso (primero) si hubo defect
+        ifelse (aux = 0)
+        ;; Mientras no haya defect, yo tampoco.
+        [set accion "C"]
+        ;; Defect con probabilidad igual al ratio de tus defects
+        [
+          ifelse (random-float 1 < (aux / length historia2))
+          [set accion "D"]
+          [set accion "C"]
+        ]        
+      ]
+    ]
+    ;;----------------------------------------------------------------
+    ;;----------------------------------------------------------------
+    if (estrategia = "Genetica")
+    [
+      RTSP jugador1 jugador2
+      genes jugador1
+    ]
+    ;;----------------------------------------------------------------
+  ]
+  
+end
+
+;;=====================================================================
+;;=====================================================================
+;;=====================================================================
+;;  para llamar a las JUGADAS
+;;=====================================================================
+
+;; Crea NUMERO tortugas con la estregia
+
+;; 1.-
+;; ALWAYS COOPERATE
+to Always-Cooperate [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Always-Cooperate"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    ;; Variables fisicas
+    set color blue
+    set shape "circle"
+    setxy random-xcor random-ycor
+  ]
+end
+
+;; 2.-
+;; ALWAYS DEFECT
+to Always-Defect [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Always-Defect"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    ;; Variables fisicas
+    set color red
+    set shape "circle"
+    setxy random-xcor random-ycor
+  ]
+end
+
+;; 3.-
+;; TIT FOR TAT
+to Tit-For-Tat [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Tit-For-Tat"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    ;; Variables fisicas
+    set color green
+    set shape "circle"
+    setxy random-xcor random-ycor
+  ]
+end
+
+;; 4.-
+;; RANDOM
+to Random-Strategy [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Random-Strategy"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    ;; Variables fisicas
+    set color gray
+    set shape "circle"
+    setxy random-xcor random-ycor
+  ]
+end
+
+;; 5.-
+;; TIT FOR TWO TATS
+to Tit-For-Two-Tats [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Tit-For-Two-Tats"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    ;; Variables fisicas
+    set color green + 3
+    set shape "circle"
+    setxy random-xcor random-ycor
+  ]
+end
+
+;; 6.-
+;; TESTER
+to Tester [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Tester"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    set aux "D"
+    ;; Variables fisicas
+    set color orange
+    set shape "circle"
+    setxy random-xcor random-ycor
+  ]
+end
+
+;; 7.-
+;; Eatherly
+to Eatherly [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Eatherly"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    set aux 0
+    ;; Variables fisicas
+    set color white
+    set shape "circle"
+    setxy random-xcor random-ycor
+  ]
+end
+
+
+;--------------------------------------------------
+to x-men [numero]
+  crt numero [
+    ;; Variables del juego
+    set estrategia "Genetica"
+    set accion ""
+    set historia []
+    set utilidad 0
+    set utilidad-total 0
+    set aux 0
+    ;; Variables fisicas
+    set color green + random 10
+    set shape "circle"
+    setxy random-xcor random-ycor
+    ;----------------------------
+    set gen0 one-of ["C" "D"]
+    set gen00 one-of ["C" "D"]
+    set gen01 one-of ["C" "D"]
+    set gen1 one-of ["C" "D"]
+    set gen2 one-of ["C" "D"]
+    set gen3 one-of ["C" "D"]
+    set gen4 one-of ["C" "D"]
+    set gen5 one-of ["C" "D"]
+    set gen6 one-of ["C" "D"]
+    set gen7 one-of ["C" "D"]
+    set gen8 one-of ["C" "D"]
+    set gen9 one-of ["C" "D"]
+    set gen10 one-of ["C" "D"]
+    set gen11 one-of ["C" "D"]
+    set gen12 one-of ["C" "D"]
+    set gen13 one-of ["C" "D"]
+    set gen14 one-of ["C" "D"]
+    set gen15 one-of ["C" "D"]
+    set gen16 one-of ["C" "D"]  
+  ]
+end
